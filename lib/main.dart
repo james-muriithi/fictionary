@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart';
 
 void main() => runApp(MyApp());
 
@@ -30,6 +33,26 @@ class _MyHomePageState extends State<MyHomePage> {
   String _token = 'cb3b899a930da2bfc64c545098a5f98e5b82f78e';
   TextEditingController _controller = TextEditingController();
 
+  StreamController _streamController;
+  Stream _stream;
+
+  _search() async{
+    if(_controller.text == null || _controller.text.length == 0){
+      _streamController.add(null);
+    }
+
+    Response response= await get(_url+_controller.text.trim(),headers: {'Authorization':"Token "+_token});
+
+    _streamController.add(response.body);
+  }
+
+  @override
+  void initState() {
+    _streamController = StreamController();
+    _stream = _streamController.stream;
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -59,11 +82,42 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
               IconButton(
                 icon: Icon(Icons.search, color: Colors.white),
-                onPressed: () {},
+                onPressed: () {
+                  _search();
+                },
               )
             ],
           ),
         ),
+      ),
+      body: StreamBuilder(
+        stream: _stream,
+        builder: (BuildContext context,AsyncSnapshot snapshot){
+          if(snapshot.data == null){
+            return Center(
+              child: Text("Enter a search word"),
+            );
+          }
+
+          return ListView.builder(
+            itemCount: snapshot.data['definitions'].length,
+            itemBuilder: (BuildContext ctx, int index){
+              return ListBody(
+                children: <Widget>[
+                  Container(
+                    color: Colors.grey[300],
+                    child: ListTile(
+                      leading: snapshot.data['definition'][index]['image_url'] == null ? null :CircleAvatar(
+                        backgroundImage: NetworkImage(snapshot.data['definition'][index]['image_url']),
+                      ),
+                      title: Text(_controller.text.trim() + "(" + snapshot.data['definition'][index]['type'] + ")"),
+                    ),
+                  )
+                ],
+              );
+            },
+            );
+        },
       ),
     );
   }
