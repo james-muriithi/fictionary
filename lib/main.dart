@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart';
@@ -36,21 +37,22 @@ class _MyHomePageState extends State<MyHomePage> {
   StreamController _streamController;
   Stream _stream;
 
-  _search() async{
-    if(_controller.text == null || _controller.text.length == 0){
+  _search() async {
+    if (_controller.text == null || _controller.text.length == 0) {
       _streamController.add(null);
     }
 
-    Response response= await get(_url+_controller.text.trim(),headers: {'Authorization':"Token "+_token});
+    Response response = await get(_url + _controller.text.trim(),
+        headers: {'Authorization': "Token " + _token});
 
-    _streamController.add(response.body);
+    _streamController.add(json.decode(response.body));
   }
 
   @override
   void initState() {
+    super.initState();
     _streamController = StreamController();
     _stream = _streamController.stream;
-    super.initState();
   }
 
   @override
@@ -64,11 +66,10 @@ class _MyHomePageState extends State<MyHomePage> {
             children: <Widget>[
               Expanded(
                 child: Container(
-                  margin: const EdgeInsets.only(left: 12.0,bottom: 8.0),
+                  margin: const EdgeInsets.only(left: 12.0, bottom: 8.0),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24.0)
-                  ),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24.0)),
                   child: TextFormField(
                     onChanged: (String text) {},
                     controller: _controller,
@@ -92,8 +93,8 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       body: StreamBuilder(
         stream: _stream,
-        builder: (BuildContext context,AsyncSnapshot snapshot){
-          if(snapshot.data == null){
+        builder: (BuildContext context, AsyncSnapshot snapshot) {
+          if (snapshot.data == null) {
             return Center(
               child: Text("Enter a search word"),
             );
@@ -101,22 +102,51 @@ class _MyHomePageState extends State<MyHomePage> {
 
           return ListView.builder(
             itemCount: snapshot.data['definitions'].length,
-            itemBuilder: (BuildContext ctx, int index){
+            itemBuilder: (BuildContext ctx, int index) {
               return ListBody(
                 children: <Widget>[
-                  Container(
+                  Card(
+                    elevation: 5,
                     color: Colors.grey[300],
                     child: ListTile(
-                      leading: snapshot.data['definition'][index]['image_url'] == null ? null :CircleAvatar(
-                        backgroundImage: NetworkImage(snapshot.data['definition'][index]['image_url']),
-                      ),
-                      title: Text(_controller.text.trim() + "(" + snapshot.data['definition'][index]['type'] + ")"),
-                    ),
+                        leading: snapshot.data['definitions'][index]
+                                    ['image_url'] ==
+                                null
+                            ? null
+                            : CircleAvatar(
+                                backgroundImage: NetworkImage(snapshot
+                                    .data['definitions'][index]['image_url']),
+                              ),
+                        title: Text(
+                          _controller.text.trim() +
+                              "(" +
+                              snapshot.data['definitions'][index]['type'] +
+                              ")",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+                          children: <Widget>[
+                            Padding(
+                              padding:
+                                  const EdgeInsets.only(top: 10.0, bottom: 5.0),
+                              child: Text(snapshot.data['definitions'][index]
+                                  ['definition']),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 5.0),
+                              child: Text("Example: " +
+                                  snapshot.data['definitions'][index]
+                                      ['example']),
+                            ),
+                          ],
+                        )),
                   )
                 ],
               );
             },
-            );
+          );
         },
       ),
     );
