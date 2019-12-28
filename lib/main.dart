@@ -33,6 +33,7 @@ class _MyHomePageState extends State<MyHomePage> {
   String _url = 'https://owlbot.info/api/v4/dictionary/';
   String _token = 'cb3b899a930da2bfc64c545098a5f98e5b82f78e';
   TextEditingController _controller = TextEditingController();
+  Timer _debounce;
 
   StreamController _streamController;
   Stream _stream;
@@ -40,8 +41,10 @@ class _MyHomePageState extends State<MyHomePage> {
   _search() async {
     if (_controller.text == null || _controller.text.length == 0) {
       _streamController.add(null);
+      return;
     }
 
+    _streamController.add('waiting');
     Response response = await get(_url + _controller.text.trim(),
         headers: {'Authorization': "Token " + _token});
 
@@ -71,7 +74,12 @@ class _MyHomePageState extends State<MyHomePage> {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(24.0)),
                   child: TextFormField(
-                    onChanged: (String text) {},
+                    onChanged: (String text) {
+                      if (_debounce?.isActive ?? false) _debounce.cancel();
+                      _debounce = Timer(const Duration(milliseconds: 1000), () {
+                        _search();
+                      });
+                    },
                     controller: _controller,
                     decoration: InputDecoration(
                       hintText: 'Search for a word',
@@ -100,6 +108,12 @@ class _MyHomePageState extends State<MyHomePage> {
             );
           }
 
+          if(snapshot.data == 'waiting'){
+            return Center(
+              child: CircularProgressIndicator(),
+            );
+          }
+
           return ListView.builder(
             itemCount: snapshot.data['definitions'].length,
             itemBuilder: (BuildContext ctx, int index) {
@@ -125,8 +139,8 @@ class _MyHomePageState extends State<MyHomePage> {
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                         subtitle: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
                             Padding(
                               padding:
@@ -136,9 +150,27 @@ class _MyHomePageState extends State<MyHomePage> {
                             ),
                             Padding(
                               padding: const EdgeInsets.only(bottom: 5.0),
-                              child: Text("Example: " +
-                                  snapshot.data['definitions'][index]
-                                      ['example']),
+                              child: RichText(
+                                text: new TextSpan(
+                                  // Note: Styles for TextSpans must be explicitly defined.
+                                  // Child text spans will inherit styles from parent
+                                  style: new TextStyle(
+                                    fontSize: 12.0,
+                                    color: Colors.black.withOpacity(0.8),
+                                  ),
+                                  children: <TextSpan>[
+                                    new TextSpan(
+                                      text: 'Example: ',
+                                      style: new TextStyle(
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                    new TextSpan(
+                                      text: snapshot.data['definitions'][index]
+                                          ['example'],
+                                    )
+                                  ],
+                                ),
+                              ),
                             ),
                           ],
                         )),
